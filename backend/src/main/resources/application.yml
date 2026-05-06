@@ -1,0 +1,96 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: deepseek-investment-system
+
+  # Default profile uses H2 for dev; switch to mysql for prod
+  profiles:
+    active: dev
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+---
+# Dev profile - H2 in-memory database (auto-DDL, no Flyway)
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:h2:mem:investment;DB_CLOSE_DELAY=-1;MODE=MySQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+
+  sql:
+    init:
+      mode: always
+
+  flyway:
+    enabled: false
+
+---
+# Prod profile - MySQL
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/investment?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Shanghai&characterEncoding=utf8mb4
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${MYSQL_USER:root}
+    password: ${MYSQL_PASSWORD:root}
+
+---
+# DeepSeek API configuration
+deepseek:
+  api-key: ${DEEPSEEK_API_KEY:}
+  base-url: ${DEEPSEEK_BASE_URL:https://api.deepseek.com}
+  model: ${DEEPSEEK_MODEL:deepseek-chat}
+  temperature: 0.1
+  max-tokens: 4096
+  max-retries: 3
+  timeout-ms: 90000
+  rate-limit-delay-ms: 1200
+
+# Investment defaults
+investment:
+  defaults:
+    capital: 1000000
+    mode: long_short
+    max-positions: 12
+    max-position-weight: 0.15
+    min-confidence: 0.35
+    min-objective-ratio: 0.45
+    hold-days: 60
+    rebalance-days: 20
+    stop-loss-pct: 0.08
+    take-profit-pct: 0.20
