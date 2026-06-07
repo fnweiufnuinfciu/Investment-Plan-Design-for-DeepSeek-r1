@@ -19,10 +19,14 @@ public class PortfolioService {
 
     private static final Logger log = LoggerFactory.getLogger(PortfolioService.class);
     private final DeepSeekService deepSeekService;
+    private final FinBertService finBertService;
     private final InvestmentDefaults defaults;
 
-    public PortfolioService(DeepSeekService deepSeekService, InvestmentDefaults defaults) {
+    public PortfolioService(DeepSeekService deepSeekService,
+                            FinBertService finBertService,
+                            InvestmentDefaults defaults) {
         this.deepSeekService = deepSeekService;
+        this.finBertService = finBertService;
         this.defaults = defaults;
     }
 
@@ -60,10 +64,29 @@ public class PortfolioService {
                     && !req.getAnalystRecommendation().isBlank()) {
                 recommendation = req.getAnalystRecommendation();
                 dsResult.put("recommendation", recommendation);
-                dsResult.put("confidence", Math.max(
-                    toDouble(dsResult.get("confidence"), 0.5),
-                    toDouble(req.getObjectiveRatio(), 0.6)));
+                // Fallback confidence: prefer user-provided confidence, then
+                // estimate from objective ratio (higher objective → more reliable signal)
+                double fallbackConf = req.getConfidence() != null
+                        ? req.getConfidence()
+                        : 0.4 + 0.4 * toDouble(req.getObjectiveRatio(), 0.5);
+                dsResult.put("confidence", fallbackConf);
             }
+
+            // FinBERT: compute objective/subjective ratios from report text.
+            // Falls back to heuristic when Python / model unavailable.
+            FinBertService.FinBertResult fbResult = finBertService.classify(
+                    req.getReportText(), req.getTicker());
+
+            // Use FinBERT ratios when available; otherwise keep form-provided values.
+            double effectiveObjRatio = fbResult.fallback()
+                    ? toDouble(req.getObjectiveRatio(), fbResult.objectiveRatio())
+                    : fbResult.objectiveRatio();
+            double effectiveSubjRatio = fbResult.fallback()
+                    ? toDouble(req.getSubjectiveRatio(), fbResult.subjectiveRatio())
+                    : fbResult.subjectiveRatio();
+
+            log.debug("FinBERT {} → obj={}, subj={} (fallback={})",
+                    req.getTicker(), effectiveObjRatio, effectiveSubjRatio, fbResult.fallback());
 
             normalized.add(new NormalizedRecord(
                     req.getTicker(),
@@ -71,8 +94,8 @@ public class PortfolioService {
                     Recommendation.fromLabel((String) dsResult.get("recommendation")).getScore(),
                     (String) dsResult.get("recommendation"),
                     toDouble(dsResult.get("confidence"), 0.5),
-                    toDouble(req.getObjectiveRatio(), 0.5),
-                    toDouble(req.getSubjectiveRatio(), 0.5),
+                    effectiveObjRatio,
+                    effectiveSubjRatio,
                     toDouble(dsResult.get("weight"), 0.5),
                     toDouble(req.getVolatility20d(), 0.3),
                     req.getFutureAr60d(),
@@ -83,7 +106,10 @@ public class PortfolioService {
                     (String) dsResult.get("subjective_summary"),
                     Map.of(
                             "latency_ms", dsResult.getOrDefault("_api_latency_ms", 0L),
-                            "model", dsResult.getOrDefault("_api_model", "unknown")
+                            "model", dsResult.getOrDefault("_api_model", "unknown"),
+                            "finbert_obj_ratio", fbResult.objectiveRatio(),
+                            "finbert_subj_ratio", fbResult.subjectiveRatio(),
+                            "finbert_fallback", fbResult.fallback()
                     ),
                     (String) dsResult.get("_api_error")
             ));
@@ -265,7 +291,7 @@ public class PortfolioService {
         List<Candidate> shorts = sorted.stream().filter(c -> c.score.finalScore() < 0).limit(perSide).toList();
 
         double longTarget = shorts.isEmpty() ? 1.0 : 0.5;
-        double shortTarget = longs.isEmpty() ? 0.0 : 0.5;
+        double shortTarget = longs.isEmpty() ? 1.0 : 0.5;
 
         double[] longWeights = SignalCalculator.allocateWithCap(
                 longs.stream().mapToDouble(c -> Math.abs(c.score.finalScore())).toArray(),

@@ -39,7 +39,13 @@
           <p v-if="loginError" class="error-text">{{ loginError }}</p>
         </el-tab-pane>
       </el-tabs>
-      <p class="hint">分析功能无需登录即可使用，登录后可管理报告及查看历史方案</p>
+      <div class="guest-zone">
+        <el-divider>或</el-divider>
+        <el-button size="large" @click="$router.push('/')" style="width:100%">
+          跳过登录，直接体验
+        </el-button>
+      </div>
+      <p class="hint">示例账号：admin / admin123 | 不登录可直接使用策略分析功能</p>
     </div>
   </div>
 </template>
@@ -109,17 +115,65 @@ async function handleRegister() {
 
 <style scoped>
 .login-page {
-  display: flex; justify-content: center; align-items: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   min-height: calc(100vh - 120px);
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(200,164,92,0.06) 0%, transparent 55%),
+    radial-gradient(ellipse at 70% 70%, rgba(91,141,239,0.05) 0%, transparent 50%);
 }
 .login-card {
-  width: 420px; background: #fff; border-radius: 16px;
-  box-shadow: 0 4px 24px rgba(0,0,0,0.08); padding: 40px;
+  width: 440px;
+  background: var(--card-bg, #fafaf9);
+  border: 1px solid var(--card-border, #e7e5e0);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 0 var(--card-border, #e7e5e0),
+    0 8px 40px rgba(0,0,0,0.12);
+  padding: 44px 40px 36px;
+  animation: cardUp 0.6s cubic-bezier(0.16,1,0.3,1) both;
 }
-.login-header { text-align: center; margin-bottom: 24px; }
-.login-header h2 { font-size: 1.2rem; margin: 8px 0 4px; }
-.login-header p { color: #6b7280; font-size: 0.85rem; }
+@keyframes cardUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.login-header { text-align: center; margin-bottom: 28px; }
+.login-header .el-icon {
+  color: var(--accent, #c8a45c);
+  margin-bottom: 8px;
+}
+.login-header h2 {
+  font-family: var(--font-display, serif);
+  font-size: 1.25rem;
+  margin: 8px 0 6px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--text, #1c1c1e);
+}
+.login-header p {
+  color: var(--text-muted, #7c7c82);
+  font-size: 0.85rem;
+}
+
 .login-tabs { margin-top: 8px; }
-.error-text { color: #f56c6c; font-size: 0.85rem; margin-top: 8px; text-align: center; }
-.hint { text-align: center; color: #9ca3af; font-size: 0.75rem; margin-top: 16px; }
+
+.error-text {
+  color: var(--danger, #c4554d);
+  font-size: 0.85rem;
+  margin-top: 10px;
+  text-align: center;
+}
+
+.hint {
+  text-align: center;
+  color: var(--text-muted, #7c7c82);
+  font-size: 0.75rem;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border, #e4e4e0);
+  letter-spacing: 0.02em;
+}
+.guest-zone { margin-top: 20px; }
 </style>

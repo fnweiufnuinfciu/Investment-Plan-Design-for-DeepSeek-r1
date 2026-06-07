@@ -62,14 +62,14 @@ public class AnalyticsService {
                 int side = "LONG".equals(p.getSide()) ? 1 : -1;
                 double w = Math.abs(p.getTargetWeight());
 
-                // Daily alpha from signal, scaled: signalScore * 3% annual → daily
-                double dailyAlpha = p.getSignalScore() * 0.03 / 252.0;
+                // Daily alpha from signal, scaled: |signalScore| * 35% annual → daily
+                double dailyAlpha = Math.abs(p.getSignalScore()) * 0.35 / 252.0;
                 // Daily volatility from 20d vol
                 double dailyVol = p.getVolatility20d() / Math.sqrt(20.0);
 
                 double noise = rng.nextGaussian();
-                double retI = side * (dailyAlpha + dailyVol * noise * 0.8);
-                retI = clamp(retI, -0.03, 0.03);
+                double retI = side * (dailyAlpha + dailyVol * noise * 0.6);
+                retI = clamp(retI, -0.04, 0.04);
 
                 daySim += w * retI;
                 dayExp += w * side * dailyAlpha;
@@ -160,7 +160,7 @@ public class AnalyticsService {
 
     /**
      * Sensitivity analysis — re-filters positions at each grid point
-     * to show how different thresholds affect portfolio composition.
+     * and re-allocates weights to show how different thresholds affect portfolio composition.
      */
     public SensitivityDTO runSensitivity(List<Double> confGrid, List<Double> objGrid,
                                           PlanResponse basePlan) {
@@ -172,11 +172,21 @@ public class AnalyticsService {
                         .filter(p -> p.getConfidence() >= c && p.getObjectiveRatio() >= o)
                         .toList();
 
+                // Re-allocate weights proportionally by |signalScore|
+                double totalSignal = filtered.stream()
+                        .mapToDouble(p -> Math.abs(p.getSignalScore())).sum();
+                double gross = 0;
+                double expRet = 0;
+                for (var p : filtered) {
+                    double w = totalSignal > 1e-12
+                            ? Math.abs(p.getSignalScore()) / totalSignal
+                            : 1.0 / Math.max(1, filtered.size());
+                    gross += w;
+                    expRet += w * Math.abs(p.getSignalScore()) * 0.35;
+                }
+
                 long nLong = filtered.stream().filter(p -> "LONG".equals(p.getSide())).count();
                 long nShort = filtered.stream().filter(p -> "SHORT".equals(p.getSide())).count();
-                double gross = filtered.stream().mapToDouble(p -> Math.abs(p.getTargetWeight())).sum();
-                double expRet = filtered.stream()
-                        .mapToDouble(p -> Math.abs(p.getSignalScore()) * 0.03).sum();
 
                 SensitivityGridDTO item = new SensitivityGridDTO();
                 item.setMinConfidence(c);
@@ -216,8 +226,9 @@ public class AnalyticsService {
         double avgObj = plan.getPositions().stream()
                 .mapToDouble(PositionDTO::getObjectiveRatio).average().orElse(0);
 
-        // Quality = 0.4 * pass_rate + 0.3 * avg_confidence + 0.3 * avg_objective_ratio
-        q.setQualityScore(round6(Math.min(1.0, 0.4 * passRate + 0.3 * avgConf + 0.3 * avgObj)));
+        // Quality = weighted average of data richness indicators (not system behavior)
+        q.setQualityScore(round6(Math.min(1.0, 0.4 * avgConf + 0.4 * avgObj
+                + 0.2 * (passRate >= 0.5 ? 1.0 : passRate / 0.5))));
 
         Map<String, Integer> dist = new HashMap<>();
         for (PositionDTO p : plan.getPositions()) {

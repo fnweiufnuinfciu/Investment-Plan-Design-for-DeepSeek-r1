@@ -4,6 +4,7 @@ import com.investment.model.entity.Report;
 import com.investment.repository.ReportRepository;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -37,12 +38,14 @@ public class ReportController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<?> create(@Valid @RequestBody Report report) {
         Report saved = reportRepository.save(report);
         return ResponseEntity.ok(saved);
     }
 
     @PutMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> update(@PathVariable Long id, @Valid @RequestBody Report report) {
         if (!reportRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -52,6 +55,7 @@ public class ReportController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<?> delete(@PathVariable Long id) {
         if (!reportRepository.existsById(id)) {
             return ResponseEntity.notFound().build();
@@ -61,6 +65,7 @@ public class ReportController {
     }
 
     @DeleteMapping("/batch")
+    @Transactional
     public ResponseEntity<?> deleteBatch(@RequestBody List<Long> ids) {
         reportRepository.deleteAllById(ids);
         return ResponseEntity.ok(Map.of("message", "批量删除成功", "count", ids.size()));

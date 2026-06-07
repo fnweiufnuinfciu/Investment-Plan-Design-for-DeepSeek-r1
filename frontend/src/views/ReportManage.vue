@@ -9,6 +9,17 @@
         </div>
       </div>
 
+      <!-- Empty state -->
+      <div v-if="reports.length === 0" class="empty-state">
+        <div class="empty-icon">
+          <svg viewBox="0 0 80 80" fill="none"><rect x="18" y="12" width="44" height="56" rx="3" stroke="currentColor" stroke-width="1.3"/><line x1="28" y1="28" x2="52" y2="28" stroke="currentColor" stroke-width="1" opacity="0.3"/><line x1="28" y1="36" x2="52" y2="36" stroke="currentColor" stroke-width="1" opacity="0.3"/><line x1="28" y1="44" x2="44" y2="44" stroke="currentColor" stroke-width="1" opacity="0.3"/><circle cx="56" cy="56" r="12" stroke="currentColor" stroke-width="1.2"/><line x1="50" y1="56" x2="62" y2="56" stroke="currentColor" stroke-width="1.2"/><line x1="56" y1="50" x2="56" y2="62" stroke="currentColor" stroke-width="1.2"/></svg>
+        </div>
+        <h3>暂无研报记录</h3>
+        <p>手动添加或从「策略看板」批量导入分析结果</p>
+        <el-button type="primary" size="small" @click="showAdd = true">添加第一份研报</el-button>
+      </div>
+
+      <template v-else>
       <el-table :data="reports" stripe size="small" @selection-change="s => selected = s" max-height="500">
         <el-table-column type="selection" width="40"/>
         <el-table-column prop="id" label="ID" width="60"/>
@@ -32,6 +43,7 @@
         共 {{ reports.length }} 条记录
         <el-button size="small" style="margin-left:8px" @click="loadData">刷新</el-button>
       </div>
+      </template>
     </div>
 
     <!-- Add/Edit Dialog -->
@@ -113,7 +125,33 @@ onMounted(loadData)
 </script>
 
 <style scoped>
-.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-.card-header h2 { font-size: 1.05rem; font-weight: 700; }
+.card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border, #e4e4e0); }
+.card-header h2 { font-family: var(--font-display, serif); font-size: 1rem; font-weight: 700; letter-spacing: 0.03em; }
 .header-actions { display: flex; gap: 8px; }
+
+/* Empty state */
+.empty-state {
+  text-align: center;
+  padding: 56px 24px 44px;
+  animation: fadeIn 0.5s ease both;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.empty-icon {
+  width: 64px; height: 64px;
+  margin: 0 auto 16px;
+  color: var(--accent, #c8a45c);
+  opacity: 0.6;
+}
+.empty-state h3 {
+  font-family: var(--font-display, serif);
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+  color: var(--text, #1c1c1e);
+}
+.empty-state p {
+  color: var(--text-muted, #7c7c82);
+  font-size: 0.85rem;
+  margin-bottom: 16px;
+}
 </style>

@@ -94,3 +94,7 @@ investment:
     rebalance-days: 20
     stop-loss-pct: 0.08
     take-profit-pct: 0.20
+
+# FinBERT text classifier
+finbert:
+  script-path: ${FINBERT_SCRIPT:../finbert/finbert_classifier.py}

@@ -4,6 +4,7 @@ import com.investment.model.entity.AnalysisHistory;
 import com.investment.repository.AnalysisHistoryRepository;
 import com.investment.repository.UserRepository;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -36,6 +37,7 @@ public class HistoryController {
     }
 
     @PostMapping("/save")
+    @Transactional
     public ResponseEntity<?> save(@RequestBody List<AnalysisHistory> records, Principal principal) {
         if (principal == null) {
             return ResponseEntity.status(401).body(Map.of("error", "请先登录"));

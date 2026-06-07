@@ -9,6 +9,7 @@ import java.util.List;
 public class PlanRequest {
     @NotEmpty
     private List<@Valid ReportRequest> records;
+    @Valid
     private PortfolioSettings settings = new PortfolioSettings();
     private String inputFile;
 }
